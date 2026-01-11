@@ -1,0 +1,8 @@
+[
+    {"name":"Miyazaki Style","description":"Japanese anime style by Hayao Miyazaki","category_id":1,"price":2990,"tags":["anime","miyazaki","ghibli"],"is_active":true},
+    {"name":"Studio Photo","description":"Professional studio photography","category_id":2,"price":1990,"tags":["photo","studio"],"is_active":true},
+    {"name":"Watercolor","description":"Watercolor painting","category_id":3,"price":2490,"tags":["art","watercolor"],"is_active":true},
+    {"name":"Cyberpunk","description":"Cyberpunk style","category_id":3,"price":3490,"tags":["cyberpunk","sci-fi"],"is_active":true},
+    {"name":"Vintage","description":"Vintage photo style","category_id":2,"price":1790,"tags":["vintage","retro"],"is_active":true}
+  ]
+  

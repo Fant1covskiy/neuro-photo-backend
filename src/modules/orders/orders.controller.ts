@@ -1,0 +1,74 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  ParseIntPipe,
+  UseInterceptors,
+  UploadedFiles,
+} from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { OrdersService } from './orders.service';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderDto } from './dto/update-order.dto';
+
+@Controller()
+export class OrdersController {
+  constructor(private readonly ordersService: OrdersService) {}
+
+  @Post('orders')
+  @UseInterceptors(
+    FilesInterceptor('photos', 3, {
+      storage: diskStorage({
+        destination: './uploads/orders',
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          cb(null, `${randomName}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  async create(
+    @Body() createOrderDto: CreateOrderDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const photos = files.map((file) => file.filename);
+    return this.ordersService.create(createOrderDto, photos);
+  }
+
+  @Get('admin/orders')
+  findAll() {
+    return this.ordersService.findAll();
+  }
+
+  @Get('orders/user/:telegramUserId')
+  findByUser(@Param('telegramUserId', ParseIntPipe) telegramUserId: number) {
+    return this.ordersService.findByUser(telegramUserId);
+  }
+
+  @Get('orders/:id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.findOne(id);
+  }
+
+  @Put('admin/orders/:id')
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateOrderDto: UpdateOrderDto,
+  ) {
+    return this.ordersService.update(id, updateOrderDto);
+  }
+
+  @Delete('admin/orders/:id')
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.remove(id);
+  }
+}
