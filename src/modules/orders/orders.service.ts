@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Order, OrderStatus } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class OrdersService {
@@ -55,5 +57,36 @@ export class OrdersService {
   async remove(id: number): Promise<void> {
     const order = await this.findOne(id);
     await this.orderRepository.remove(order);
+  }
+
+  // 🆕 Добавить готовые фото к заказу
+  async addResultPhotos(orderId: number, photos: string[]): Promise<Order> {
+    const order = await this.findOne(orderId);
+    
+    // Добавляем новые фото к существующим
+    const currentPhotos = order.result_photos || [];
+    order.result_photos = [...currentPhotos, ...photos];
+    
+    return this.orderRepository.save(order);
+  }
+
+  // 🆕 Удалить готовое фото
+  async removeResultPhoto(orderId: number, photoUrl: string): Promise<Order> {
+    const order = await this.findOne(orderId);
+    
+    if (!order.result_photos || order.result_photos.length === 0) {
+      throw new NotFoundException('No result photos found');
+    }
+
+    // Удаляем файл с диска
+    const filePath = path.join('./uploads/results', photoUrl);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Удаляем из массива
+    order.result_photos = order.result_photos.filter(photo => photo !== photoUrl);
+    
+    return this.orderRepository.save(order);
   }
 }

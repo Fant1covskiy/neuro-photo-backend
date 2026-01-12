@@ -54,8 +54,13 @@ export class OrdersController {
     return this.ordersService.findByUser(telegramUserId);
   }
 
-  @Get('orders/:id')
+  @Get('admin/orders/:id')
   findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.findOne(id);
+  }
+
+  @Get('orders/:id')
+  findOneByUser(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.findOne(id);
   }
 
@@ -70,5 +75,38 @@ export class OrdersController {
   @Delete('admin/orders/:id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.remove(id);
+  }
+
+  // 🆕 Загрузка готовых фото
+  @Post('admin/orders/:id/result-photos')
+  @UseInterceptors(
+    FilesInterceptor('photos', 10, {
+      storage: diskStorage({
+        destination: './uploads/results',
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          cb(null, `${randomName}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  async uploadResultPhotos(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const photos = files.map((file) => file.filename);
+    return this.ordersService.addResultPhotos(id, photos);
+  }
+
+  // 🆕 Удаление готового фото
+  @Delete('admin/orders/:id/result-photos')
+  async deleteResultPhoto(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('photo_url') photoUrl: string,
+  ) {
+    return this.ordersService.removeResultPhoto(id, photoUrl);
   }
 }
