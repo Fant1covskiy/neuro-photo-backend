@@ -11,11 +11,10 @@ import {
   UploadedFiles,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { cloudinaryStorage, cloudinaryResultStorage } from '../../config/cloudinary.config'; // 🔥 ИМПОРТ
 
 @Controller()
 export class OrdersController {
@@ -24,23 +23,15 @@ export class OrdersController {
   @Post('orders')
   @UseInterceptors(
     FilesInterceptor('photos', 3, {
-      storage: diskStorage({
-        destination: './uploads/orders',
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          cb(null, `${randomName}${extname(file.originalname)}`);
-        },
-      }),
+      storage: cloudinaryStorage, // 🔥 ИСПОЛЬЗУЕМ CLOUDINARY
     }),
   )
   async create(
     @Body() createOrderDto: CreateOrderDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    const photos = files.map((file) => file.filename);
+    // 🔥 Cloudinary возвращает URL в file.path
+    const photos = files.map((file: any) => file.path);
     return this.ordersService.create(createOrderDto, photos);
   }
 
@@ -50,7 +41,7 @@ export class OrdersController {
   }
 
   @Get('orders/user/:telegramUserId')
-  findByUser(@Param('telegramUserId') telegramUserId: string) { // ✅ Убрали ParseIntPipe
+  findByUser(@Param('telegramUserId') telegramUserId: string) {
     return this.ordersService.findByUser(telegramUserId);
   }
 
@@ -80,23 +71,15 @@ export class OrdersController {
   @Post('admin/orders/:id/result-photos')
   @UseInterceptors(
     FilesInterceptor('photos', 10, {
-      storage: diskStorage({
-        destination: './uploads/results',
-        filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          cb(null, `${randomName}${extname(file.originalname)}`);
-        },
-      }),
+      storage: cloudinaryResultStorage, // 🔥 ИСПОЛЬЗУЕМ CLOUDINARY
     }),
   )
   async uploadResultPhotos(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    const photos = files.map((file) => file.filename);
+    // 🔥 Cloudinary возвращает URL в file.path
+    const photos = files.map((file: any) => file.path);
     return this.ordersService.addResultPhotos(id, photos);
   }
 

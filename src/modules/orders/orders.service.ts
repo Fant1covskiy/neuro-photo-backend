@@ -4,8 +4,7 @@ import { Repository } from 'typeorm';
 import { Order, OrderStatus } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import * as fs from 'fs';
-import * as path from 'path';
+import { cloudinary } from '../../config/cloudinary.config'; // 🔥 ИМПОРТ
 
 @Injectable()
 export class OrdersService {
@@ -29,7 +28,7 @@ export class OrdersService {
     });
   }
 
-  async findByUser(telegramUserId: string): Promise<Order[]> { // ✅ Изменили тип на string
+  async findByUser(telegramUserId: string): Promise<Order[]> {
     return this.orderRepository.find({
       where: { telegram_user_id: telegramUserId },
       order: { created_at: 'DESC' },
@@ -75,9 +74,17 @@ export class OrdersService {
       throw new NotFoundException('No result photos found');
     }
 
-    const filePath = path.join('./uploads/results', photoUrl);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // 🔥 Удаляем из Cloudinary
+    try {
+      // Извлекаем public_id из URL
+      const urlParts = photoUrl.split('/');
+      const publicIdWithExt = urlParts[urlParts.length - 1];
+      const publicId = publicIdWithExt.split('.')[0];
+      const folder = 'neuro-photo/results';
+      
+      await cloudinary.uploader.destroy(`${folder}/${publicId}`);
+    } catch (error) {
+      console.error('Error deleting from Cloudinary:', error);
     }
 
     order.result_photos = order.result_photos.filter(photo => photo !== photoUrl);
