@@ -50,7 +50,7 @@ export class OrdersController {
   }
 
   @Get('orders/user/:telegramUserId')
-  findByUser(@Param('telegramUserId', ParseIntPipe) telegramUserId: number) {
+  findByUser(@Param('telegramUserId') telegramUserId: string) { // ✅ Убрали ParseIntPipe
     return this.ordersService.findByUser(telegramUserId);
   }
 
@@ -77,7 +77,6 @@ export class OrdersController {
     return this.ordersService.remove(id);
   }
 
-  // 🆕 Загрузка готовых фото
   @Post('admin/orders/:id/result-photos')
   @UseInterceptors(
     FilesInterceptor('photos', 10, {
@@ -101,7 +100,6 @@ export class OrdersController {
     return this.ordersService.addResultPhotos(id, photos);
   }
 
-  // 🆕 Удаление готового фото
   @Delete('admin/orders/:id/result-photos')
   async deleteResultPhoto(
     @Param('id', ParseIntPipe) id: number,

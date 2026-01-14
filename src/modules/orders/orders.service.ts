@@ -29,7 +29,7 @@ export class OrdersService {
     });
   }
 
-  async findByUser(telegramUserId: number): Promise<Order[]> {
+  async findByUser(telegramUserId: string): Promise<Order[]> { // ✅ Изменили тип на string
     return this.orderRepository.find({
       where: { telegram_user_id: telegramUserId },
       order: { created_at: 'DESC' },
@@ -59,18 +59,15 @@ export class OrdersService {
     await this.orderRepository.remove(order);
   }
 
-  // 🆕 Добавить готовые фото к заказу
   async addResultPhotos(orderId: number, photos: string[]): Promise<Order> {
     const order = await this.findOne(orderId);
     
-    // Добавляем новые фото к существующим
     const currentPhotos = order.result_photos || [];
     order.result_photos = [...currentPhotos, ...photos];
     
     return this.orderRepository.save(order);
   }
 
-  // 🆕 Удалить готовое фото
   async removeResultPhoto(orderId: number, photoUrl: string): Promise<Order> {
     const order = await this.findOne(orderId);
     
@@ -78,13 +75,11 @@ export class OrdersService {
       throw new NotFoundException('No result photos found');
     }
 
-    // Удаляем файл с диска
     const filePath = path.join('./uploads/results', photoUrl);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
-    // Удаляем из массива
     order.result_photos = order.result_photos.filter(photo => photo !== photoUrl);
     
     return this.orderRepository.save(order);

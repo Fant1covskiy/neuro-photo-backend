@@ -1,11 +1,11 @@
-import { IsNotEmpty, IsNumber, IsString, IsOptional, IsArray } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { IsNotEmpty, IsString, IsOptional, IsArray, IsNumber } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateOrderDto {
-  @Transform(({ value }) => parseInt(value)) // Преобразуем строку в число
-  @IsNumber()
+  @Transform(({ value }) => value.toString()) // ✅ Преобразуем в строку
+  @IsString()
   @IsNotEmpty()
-  telegram_user_id: number;
+  telegram_user_id: string; // ✅ Изменили на string
 
   @IsOptional()
   @IsString()
@@ -16,7 +16,6 @@ export class CreateOrderDto {
   first_name?: string;
 
   @Transform(({ value }) => {
-    // Если пришла строка JSON - парсим
     if (typeof value === 'string') {
       try {
         return JSON.parse(value);
@@ -30,7 +29,7 @@ export class CreateOrderDto {
   @IsNotEmpty()
   styles: any[];
 
-  @Transform(({ value }) => parseFloat(value)) // Преобразуем строку в число
+  @Transform(({ value }) => parseFloat(value))
   @IsNumber()
   @IsNotEmpty()
   total_price: number;

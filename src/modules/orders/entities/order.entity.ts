@@ -13,7 +13,7 @@ export class Order {
   id: number;
 
   @Column({ type: 'bigint' })
-  telegram_user_id: number;
+  telegram_user_id: string; // ✅ Изменили на string
 
   @Column({ nullable: true })
   username: string;
