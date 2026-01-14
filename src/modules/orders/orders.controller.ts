@@ -14,7 +14,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { cloudinaryStorage, cloudinaryResultStorage } from '../../config/cloudinary.config'; // 🔥 ИМПОРТ
+import { cloudinaryStorage, cloudinaryResultStorage } from '../../config/cloudinary.config';
 
 @Controller()
 export class OrdersController {
@@ -23,14 +23,13 @@ export class OrdersController {
   @Post('orders')
   @UseInterceptors(
     FilesInterceptor('photos', 3, {
-      storage: cloudinaryStorage, // 🔥 ИСПОЛЬЗУЕМ CLOUDINARY
+      storage: cloudinaryStorage,
     }),
   )
   async create(
     @Body() createOrderDto: CreateOrderDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    // 🔥 Cloudinary возвращает URL в file.path
     const photos = files.map((file: any) => file.path);
     return this.ordersService.create(createOrderDto, photos);
   }
@@ -71,14 +70,13 @@ export class OrdersController {
   @Post('admin/orders/:id/result-photos')
   @UseInterceptors(
     FilesInterceptor('photos', 10, {
-      storage: cloudinaryResultStorage, // 🔥 ИСПОЛЬЗУЕМ CLOUDINARY
+      storage: cloudinaryResultStorage,
     }),
   )
   async uploadResultPhotos(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    // 🔥 Cloudinary возвращает URL в file.path
     const photos = files.map((file: any) => file.path);
     return this.ordersService.addResultPhotos(id, photos);
   }

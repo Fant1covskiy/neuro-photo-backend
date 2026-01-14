@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Order, OrderStatus } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { cloudinary } from '../../config/cloudinary.config'; // 🔥 ИМПОРТ
+import { cloudinary } from '../../config/cloudinary.config';
 
 @Injectable()
 export class OrdersService {
@@ -74,12 +74,10 @@ export class OrdersService {
       throw new NotFoundException('No result photos found');
     }
 
-    // 🔥 Удаляем из Cloudinary
     try {
-      // Извлекаем public_id из URL
       const urlParts = photoUrl.split('/');
-      const publicIdWithExt = urlParts[urlParts.length - 1];
-      const publicId = publicIdWithExt.split('.')[0];
+      const filename = urlParts[urlParts.length - 1];
+      const publicId = filename.split('.')[0];
       const folder = 'neuro-photo/results';
       
       await cloudinary.uploader.destroy(`${folder}/${publicId}`);
