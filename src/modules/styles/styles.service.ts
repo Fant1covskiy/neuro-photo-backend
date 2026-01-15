@@ -28,23 +28,23 @@ export class StylesService {
       options.take = filters.limit;
     }
 
-    return await this.stylesRepository.find(options);
+    return this.stylesRepository.find(options);
   }
 
   async findAllAdmin() {
-    return await this.stylesRepository.find({
+    return this.stylesRepository.find({
       order: { id: 'DESC' },
     });
   }
 
   async findOne(id: number) {
-    return await this.stylesRepository.findOne({
+    return this.stylesRepository.findOne({
       where: { id },
     });
   }
 
   async search(query: string) {
-    return await this.stylesRepository
+    return this.stylesRepository
       .createQueryBuilder('style')
       .where('style.is_active = :isActive', { isActive: true })
       .andWhere(
@@ -57,12 +57,21 @@ export class StylesService {
 
   async create(createStyleDto: CreateStyleDto) {
     const style = this.stylesRepository.create(createStyleDto);
-    return await this.stylesRepository.save(style);
+    return this.stylesRepository.save(style);
   }
 
   async update(id: number, updateStyleDto: UpdateStyleDto) {
     await this.stylesRepository.update(id, updateStyleDto);
-    return await this.findOne(id);
+    return this.findOne(id);
+  }
+
+  async updatePreviewImage(id: number, url: string) {
+    const style = await this.findOne(id);
+    if (!style) {
+      throw new Error('Style not found');
+    }
+    style.preview_image = url;
+    return this.stylesRepository.save(style);
   }
 
   async toggleActive(id: number) {
@@ -71,7 +80,7 @@ export class StylesService {
       throw new Error('Style not found');
     }
     style.is_active = !style.is_active;
-    return await this.stylesRepository.save(style);
+    return this.stylesRepository.save(style);
   }
 
   async remove(id: number) {
