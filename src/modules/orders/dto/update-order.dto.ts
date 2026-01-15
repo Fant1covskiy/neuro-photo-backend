@@ -7,33 +7,45 @@ import {
   IsOptional,
 } from 'class-validator';
 
-export class UpdateStyleDto {
-  @IsOptional()
-  @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsString()
-  description?: string;
-
+export class UpdateOrderDto {
   @IsOptional()
   @IsInt()
-  category_id?: number;
+  style_id?: number;
+
+  @IsOptional()
+  @IsString()
+  telegram_user_id?: string;
+
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @IsOptional()
+  @IsString()
+  first_name?: string;
+
+  @IsOptional()
+  @IsString()
+  last_name?: string;
+
+  @IsOptional()
+  @IsString()
+  comment?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  photos?: string[];
 
   @IsOptional()
   @IsNumber()
   price?: number;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
-
-  @IsOptional()
-  @IsString()
-  preview_image?: string;
+  @IsBoolean()
+  is_paid?: boolean;
 
   @IsOptional()
   @IsBoolean()
-  is_active?: boolean;
+  is_processed?: boolean;
 }

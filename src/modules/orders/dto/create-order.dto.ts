@@ -7,30 +7,43 @@ import {
   IsOptional,
 } from 'class-validator';
 
-export class CreateStyleDto {
+export class CreateOrderDto {
+  @IsInt()
+  style_id: number;
+
   @IsString()
-  name: string;
+  telegram_user_id: string;
 
   @IsOptional()
   @IsString()
-  description?: string;
+  username?: string;
 
-  @IsInt()
-  category_id: number;
+  @IsOptional()
+  @IsString()
+  first_name?: string;
 
-  @IsNumber()
-  price: number;
+  @IsOptional()
+  @IsString()
+  last_name?: string;
+
+  @IsOptional()
+  @IsString()
+  comment?: string;
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  tags?: string[];
+  photos?: string[];
 
   @IsOptional()
-  @IsString()
-  preview_image?: string;
+  @IsNumber()
+  price?: number;
 
   @IsOptional()
   @IsBoolean()
-  is_active?: boolean;
+  is_paid?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  is_processed?: boolean;
 }
