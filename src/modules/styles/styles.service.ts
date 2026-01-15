@@ -56,11 +56,20 @@ export class StylesService {
   }
 
   async create(createStyleDto: CreateStyleDto) {
-    const style = this.stylesRepository.create(createStyleDto);
+    const preview_images =
+      createStyleDto.preview_images?.slice(0, 5) || [];
+    const style = this.stylesRepository.create({
+      ...createStyleDto,
+      preview_images,
+    });
     return this.stylesRepository.save(style);
   }
 
   async update(id: number, updateStyleDto: UpdateStyleDto) {
+    if (updateStyleDto.preview_images) {
+      updateStyleDto.preview_images =
+        updateStyleDto.preview_images.slice(0, 5);
+    }
     await this.stylesRepository.update(id, updateStyleDto);
     return this.findOne(id);
   }
@@ -70,7 +79,13 @@ export class StylesService {
     if (!style) {
       throw new Error('Style not found');
     }
-    style.preview_image = url;
+    style.preview_images = style.preview_images || [];
+    if (!style.preview_images.length) {
+      style.preview_images = [url];
+    } else {
+      style.preview_images[0] = url;
+    }
+    style.preview_images = style.preview_images.slice(0, 5);
     return this.stylesRepository.save(style);
   }
 
