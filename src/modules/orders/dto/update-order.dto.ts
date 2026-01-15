@@ -1,12 +1,39 @@
-import { IsEnum, IsOptional, IsArray } from 'class-validator';
-import { OrderStatus } from '../entities/order.entity';
+import {
+  IsString,
+  IsNumber,
+  IsInt,
+  IsArray,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 
-export class UpdateOrderDto {
-  @IsEnum(OrderStatus)
+export class UpdateStyleDto {
   @IsOptional()
-  status?: OrderStatus;
+  @IsString()
+  name?: string;
 
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsInt()
+  category_id?: number;
+
+  @IsOptional()
+  @IsNumber()
+  price?: number;
+
+  @IsOptional()
   @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
   @IsOptional()
-  result_photos?: string[];
+  @IsString()
+  preview_image?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
 }

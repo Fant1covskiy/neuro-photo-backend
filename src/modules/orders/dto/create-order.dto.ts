@@ -1,39 +1,36 @@
-import { IsNotEmpty, IsString, IsOptional, IsArray, IsNumber } from 'class-validator';
-import { Transform } from 'class-transformer';
+import {
+  IsString,
+  IsNumber,
+  IsInt,
+  IsArray,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 
-export class CreateOrderDto {
-  @Transform(({ value }) => value.toString()) // ✅ Преобразуем в строку
+export class CreateStyleDto {
   @IsString()
-  @IsNotEmpty()
-  telegram_user_id: string; // ✅ Изменили на string
+  name: string;
 
   @IsOptional()
   @IsString()
-  username?: string;
+  description?: string;
 
-  @IsOptional()
-  @IsString()
-  first_name?: string;
+  @IsInt()
+  category_id: number;
 
-  @Transform(({ value }) => {
-    if (typeof value === 'string') {
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    }
-    return value;
-  })
-  @IsArray()
-  @IsNotEmpty()
-  styles: any[];
-
-  @Transform(({ value }) => parseFloat(value))
   @IsNumber()
-  @IsNotEmpty()
-  total_price: number;
+  price: number;
 
   @IsOptional()
-  photos?: any[];
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @IsOptional()
+  @IsString()
+  preview_image?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
 }
