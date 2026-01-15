@@ -56,37 +56,52 @@ export class StylesService {
   }
 
   async create(createStyleDto: CreateStyleDto) {
-    const preview_images =
-      createStyleDto.preview_images?.slice(0, 5) || [];
-    const style = this.stylesRepository.create({
+    const preview_images = (createStyleDto.preview_images || []).slice(0, 5);
+
+    const style: any = this.stylesRepository.create({
       ...createStyleDto,
-      preview_images,
     });
+
+    if (preview_images.length) {
+      style.preview_image = preview_images[0];
+      style.preview_images = preview_images;
+    }
+
     return this.stylesRepository.save(style);
   }
 
   async update(id: number, updateStyleDto: UpdateStyleDto) {
-    if (updateStyleDto.preview_images) {
-      updateStyleDto.preview_images =
-        updateStyleDto.preview_images.slice(0, 5);
+    const partial: any = { ...updateStyleDto };
+
+    if (updateStyleDto.preview_images && updateStyleDto.preview_images.length) {
+      const imgs = updateStyleDto.preview_images.slice(0, 5);
+      partial.preview_image = imgs[0];
+      partial.preview_images = imgs;
     }
-    await this.stylesRepository.update(id, updateStyleDto);
+
+    await this.stylesRepository.update(id, partial);
     return this.findOne(id);
   }
 
   async updatePreviewImage(id: number, url: string) {
-    const style = await this.findOne(id);
+    const style = (await this.findOne(id)) as any;
     if (!style) {
       throw new Error('Style not found');
     }
-    style.preview_images = style.preview_images || [];
-    if (!style.preview_images.length) {
-      style.preview_images = [url];
-    } else {
-      style.preview_images[0] = url;
-    }
-    style.preview_images = style.preview_images.slice(0, 5);
-    return this.stylesRepository.save(style);
+
+    const images: string[] = Array.isArray(style.preview_images)
+      ? [...style.preview_images]
+      : [];
+
+    images[0] = url;
+
+    const partial: any = {
+      preview_image: url,
+      preview_images: images.slice(0, 5),
+    };
+
+    await this.stylesRepository.update(id, partial);
+    return this.findOne(id);
   }
 
   async toggleActive(id: number) {
