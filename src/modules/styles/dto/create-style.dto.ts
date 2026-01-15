@@ -11,9 +11,8 @@ export class CreateStyleDto {
   @IsString()
   name: string;
 
-  @IsOptional()
   @IsString()
-  description?: string;
+  description: string;
 
   @IsInt()
   category_id: number;
@@ -24,12 +23,11 @@ export class CreateStyleDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  preview_images?: string[];
+  tags?: string[];
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
+  @IsString()
+  preview_image?: string; // ОДНА строка, не массив
 
   @IsOptional()
   @IsBoolean()
