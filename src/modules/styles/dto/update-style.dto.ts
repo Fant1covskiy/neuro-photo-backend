@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsInt, IsArray, IsBoolean, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsInt,
+  IsArray,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 
 export class UpdateStyleDto {
   @IsOptional()
@@ -18,8 +25,9 @@ export class UpdateStyleDto {
   price?: number;
 
   @IsOptional()
-  @IsString()
-  preview_image?: string;
+  @IsArray()
+  @IsString({ each: true })
+  preview_images?: string[];
 
   @IsOptional()
   @IsArray()

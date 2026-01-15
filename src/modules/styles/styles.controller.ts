@@ -23,7 +23,10 @@ export class StylesController {
   constructor(private readonly stylesService: StylesService) {}
 
   @Get()
-  findAll(@Query('category_id') categoryId?: string, @Query('limit') limit?: string) {
+  findAll(
+    @Query('category_id') categoryId?: string,
+    @Query('limit') limit?: string,
+  ) {
     const filters = {
       category_id: categoryId ? parseInt(categoryId) : undefined,
       limit: limit ? parseInt(limit) : undefined,

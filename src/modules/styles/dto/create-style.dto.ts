@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsInt, IsArray, IsBoolean, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsInt,
+  IsArray,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 
 export class CreateStyleDto {
   @IsString()
@@ -15,8 +22,9 @@ export class CreateStyleDto {
   price: number;
 
   @IsOptional()
-  @IsString()
-  preview_image?: string;
+  @IsArray()
+  @IsString({ each: true })
+  preview_images?: string[];
 
   @IsOptional()
   @IsArray()
