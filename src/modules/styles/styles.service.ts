@@ -58,12 +58,11 @@ export class StylesService {
   async create(createStyleDto: CreateStyleDto) {
     const preview_images = (createStyleDto.preview_images || []).slice(0, 5);
 
-    const style: any = this.stylesRepository.create({
-      ...createStyleDto,
-    });
+    const style = this.stylesRepository.create({
+      ...(createStyleDto as any),
+    }) as any;
 
     if (preview_images.length) {
-      style.preview_image = preview_images[0];
       style.preview_images = preview_images;
     }
 
@@ -71,12 +70,10 @@ export class StylesService {
   }
 
   async update(id: number, updateStyleDto: UpdateStyleDto) {
-    const partial: any = { ...updateStyleDto };
+    const partial: any = { ...(updateStyleDto as any) };
 
     if (updateStyleDto.preview_images && updateStyleDto.preview_images.length) {
-      const imgs = updateStyleDto.preview_images.slice(0, 5);
-      partial.preview_image = imgs[0];
-      partial.preview_images = imgs;
+      partial.preview_images = updateStyleDto.preview_images.slice(0, 5);
     }
 
     await this.stylesRepository.update(id, partial);
@@ -96,7 +93,6 @@ export class StylesService {
     images[0] = url;
 
     const partial: any = {
-      preview_image: url,
       preview_images: images.slice(0, 5),
     };
 
