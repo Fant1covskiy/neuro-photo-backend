@@ -27,12 +27,11 @@ export class UpdateStyleDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  preview_images?: string[];
+  tags?: string[];
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
+  @IsString()
+  preview_image?: string; // тоже строка
 
   @IsOptional()
   @IsBoolean()
