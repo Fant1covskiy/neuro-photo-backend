@@ -56,22 +56,48 @@ export class StylesService {
   }
 
   async create(createStyleDto: CreateStyleDto) {
-    const style = this.stylesRepository.create(createStyleDto);
-    return this.stylesRepository.save(style);
+    const style = this.stylesRepository.create({
+      ...createStyleDto,
+      preview_image: createStyleDto.preview_image ?? [],
+    } as any);
+    return this.stylesRepository.save(style as any);
   }
 
   async update(id: number, updateStyleDto: UpdateStyleDto) {
-    await this.stylesRepository.update(id, updateStyleDto);
+    if (updateStyleDto.preview_image && updateStyleDto.preview_image.length > 5) {
+      updateStyleDto.preview_image = updateStyleDto.preview_image.slice(0, 5);
+    }
+    await this.stylesRepository.update(id, updateStyleDto as any);
     return this.findOne(id);
   }
 
-  async updatePreviewImage(id: number, url: string) {
+  async addPreviewImage(id: number, url: string) {
     const style = await this.findOne(id);
     if (!style) {
       throw new Error('Style not found');
     }
-    style.preview_image = url;
-    return this.stylesRepository.save(style);
+    const current = Array.isArray(style.preview_image)
+      ? style.preview_image
+      : style.preview_image
+      ? [style.preview_image as any]
+      : [];
+    if (current.length >= 5) {
+      return style;
+    }
+    style.preview_image = [...current, url] as any;
+    return this.stylesRepository.save(style as any);
+  }
+
+  async removePreviewImage(id: number, url: string) {
+    const style = await this.findOne(id);
+    if (!style) {
+      throw new Error('Style not found');
+    }
+    const current = Array.isArray(style.preview_image)
+      ? style.preview_image
+      : [];
+    style.preview_image = current.filter((img) => img !== url) as any;
+    return this.stylesRepository.save(style as any);
   }
 
   async toggleActive(id: number) {

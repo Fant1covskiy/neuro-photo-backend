@@ -26,8 +26,9 @@ export class CreateStyleDto {
   tags?: string[];
 
   @IsOptional()
-  @IsString()
-  preview_image?: string; // ОДНА строка, не массив
+  @IsArray()
+  @IsString({ each: true })
+  preview_image?: string[];
 
   @IsOptional()
   @IsBoolean()

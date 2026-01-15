@@ -5,24 +5,24 @@ export class Style {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column()
   name: string;
 
-  @Column({ type: 'text' })
+  @Column('text')
   description: string;
 
-  @Column({ name: 'category_id', type: 'int' })
+  @Column()
   category_id: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column('decimal', { precision: 10, scale: 2 })
   price: number;
 
-  @Column({ type: 'simple-array', nullable: true })
+  @Column('simple-array', { nullable: true })
   tags: string[];
 
-  @Column({ name: 'preview_image', type: 'text', nullable: true })
-  preview_image: string;
+  @Column('simple-array', { nullable: true })
+  preview_image: string[] | null;
 
-  @Column({ name: 'is_active', type: 'boolean', default: true })
+  @Column({ default: true })
   is_active: boolean;
 }

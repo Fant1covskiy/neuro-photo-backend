@@ -30,8 +30,9 @@ export class UpdateStyleDto {
   tags?: string[];
 
   @IsOptional()
-  @IsString()
-  preview_image?: string; // тоже строка
+  @IsArray()
+  @IsString({ each: true })
+  preview_image?: string[];
 
   @IsOptional()
   @IsBoolean()

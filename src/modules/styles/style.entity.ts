@@ -20,8 +20,8 @@ export class Style {
   @Column('simple-array', { nullable: true })
   tags: string[];
 
-  @Column('text', { nullable: true })
-  preview_image: string | null;
+  @Column('simple-array', { nullable: true })
+  preview_image: string[] | null;
 
   @Column({ default: true })
   is_active: boolean;
