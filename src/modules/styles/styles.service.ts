@@ -56,48 +56,22 @@ export class StylesService {
   }
 
   async create(createStyleDto: CreateStyleDto) {
-    const preview_images = (createStyleDto.preview_images || []).slice(0, 5);
-
-    const style = this.stylesRepository.create({
-      ...(createStyleDto as any),
-    }) as any;
-
-    if (preview_images.length) {
-      style.preview_images = preview_images;
-    }
-
+    const style = this.stylesRepository.create(createStyleDto);
     return this.stylesRepository.save(style);
   }
 
   async update(id: number, updateStyleDto: UpdateStyleDto) {
-    const partial: any = { ...(updateStyleDto as any) };
-
-    if (updateStyleDto.preview_images && updateStyleDto.preview_images.length) {
-      partial.preview_images = updateStyleDto.preview_images.slice(0, 5);
-    }
-
-    await this.stylesRepository.update(id, partial);
+    await this.stylesRepository.update(id, updateStyleDto);
     return this.findOne(id);
   }
 
   async updatePreviewImage(id: number, url: string) {
-    const style = (await this.findOne(id)) as any;
+    const style = await this.findOne(id);
     if (!style) {
       throw new Error('Style not found');
     }
-
-    const images: string[] = Array.isArray(style.preview_images)
-      ? [...style.preview_images]
-      : [];
-
-    images[0] = url;
-
-    const partial: any = {
-      preview_images: images.slice(0, 5),
-    };
-
-    await this.stylesRepository.update(id, partial);
-    return this.findOne(id);
+    style.preview_image = url;
+    return this.stylesRepository.save(style);
   }
 
   async toggleActive(id: number) {
