@@ -1,10 +1,23 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum OrderStatus {
   PENDING = 'pending',
   PROCESSING = 'processing',
   COMPLETED = 'completed',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
+}
+
+export enum PaymentStatus {
+  NEW = 'new',
+  WAITING = 'waiting',
+  PAID = 'paid',
+  FAILED = 'failed',
 }
 
 @Entity('orders')
@@ -13,7 +26,7 @@ export class Order {
   id: number;
 
   @Column({ type: 'bigint' })
-  telegram_user_id: string; // ✅ Изменили на string
+  telegram_user_id: string;
 
   @Column({ nullable: true })
   username: string;
@@ -33,12 +46,22 @@ export class Order {
   @Column({
     type: 'enum',
     enum: OrderStatus,
-    default: OrderStatus.PENDING
+    default: OrderStatus.PENDING,
   })
   status: OrderStatus;
 
   @Column({ type: 'jsonb', nullable: true })
   result_photos: string[];
+
+  @Column({ nullable: true })
+  tochka_qr_id: string;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentStatus,
+    default: PaymentStatus.NEW,
+  })
+  payment_status: PaymentStatus;
 
   @CreateDateColumn()
   created_at: Date;
