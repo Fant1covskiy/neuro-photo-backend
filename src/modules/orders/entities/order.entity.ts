@@ -25,7 +25,7 @@ export class Order {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'varchar', length: 255 })
   telegram_user_id: string;
 
   @Column({ nullable: true })
@@ -37,7 +37,7 @@ export class Order {
   @Column({ type: 'jsonb' })
   styles: any[];
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: 'jsonb', default: '[]' })
   photos: string[];
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
