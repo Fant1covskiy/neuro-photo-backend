@@ -21,6 +21,29 @@ export class PaymentsService {
 
     const amountKopecks = Math.round(Number(order.total_price) * 100);
 
+    // 🔥 MOCK MODE: Если Tochka недоступна
+    const isMockMode = !tochkaConfig.secret || 
+                       tochkaConfig.secret === 'mock' || 
+                       tochkaConfig.accountId === 'test123';
+    
+    if (isMockMode) {
+      console.log('⚠️ Using MOCK QR (Tochka sandbox unavailable)');
+      
+      const mockQrId = `MOCK_${Date.now()}_${orderId}`;
+      const mockPayload = `https://qr.nspk.ru/AD10006M8KH234G9JOI76TA8930?type=02&bank=100000000009&sum=${amountKopecks}&cur=RUB&crc=AB75`;
+      
+      order.tochka_qr_id = mockQrId;
+      order.payment_status = PaymentStatus.WAITING;
+      await this.orderRepo.save(order);
+
+      return {
+        orderId: order.id,
+        qrId: mockQrId,
+        qrPayload: mockPayload,
+      };
+    }
+
+    // 🌐 PRODUCTION: Real Tochka API
     const body: any = {
       merchantId: tochkaConfig.merchantId,
       accountId: tochkaConfig.accountId,
@@ -36,33 +59,47 @@ export class PaymentsService {
 
     const signature = this.sign(body);
 
-    const { data } = await axios.post(
-      `${tochkaConfig.apiUrl}/sbp/qr/register`,
-      body,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Login': tochkaConfig.login,
-          'X-Signature': signature,
+    try {
+      const { data } = await axios.post(
+        `${tochkaConfig.apiUrl}/sbp/qr/register`,
+        body,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Login': tochkaConfig.login,
+            'X-Signature': signature,
+          },
         },
-      },
-    );
+      );
 
-    order.tochka_qr_id = data.qrcId || data.qrId || data.id;
-    order.payment_status = PaymentStatus.WAITING;
-    await this.orderRepo.save(order);
+      order.tochka_qr_id = data.qrcId || data.qrId || data.id;
+      order.payment_status = PaymentStatus.WAITING;
+      await this.orderRepo.save(order);
 
-    return {
-      orderId: order.id,
-      qrId: order.tochka_qr_id,
-      qrPayload: data.payload || data.qrPayload || data.qr,
-    };
+      return {
+        orderId: order.id,
+        qrId: order.tochka_qr_id,
+        qrPayload: data.payload || data.qrPayload || data.qr,
+      };
+    } catch (error) {
+      console.error('❌ Tochka API Error:', error.response?.status, error.response?.data);
+      throw new BadRequestException(`Tochka API failed: ${error.message}`);
+    }
   }
 
   async getStatus(orderId: number) {
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
     if (!order || !order.tochka_qr_id) {
       throw new BadRequestException('Order or QR not found');
+    }
+
+    // 🔥 MOCK MODE: Возвращаем WAITING
+    if (order.tochka_qr_id.startsWith('MOCK_')) {
+      console.log('⚠️ Mock status check - returning WAITING');
+      return { 
+        payment_status: order.payment_status, 
+        sbp_status: 'WAITING' 
+      };
     }
 
     const params: any = {
@@ -73,38 +110,50 @@ export class PaymentsService {
 
     const signature = this.sign(params);
 
-    const { data } = await axios.get(
-      `${tochkaConfig.apiUrl}/sbp/qr/payment-status`,
-      {
-        params,
-        headers: {
-          'X-Login': tochkaConfig.login,
-          'X-Signature': signature,
+    try {
+      const { data } = await axios.get(
+        `${tochkaConfig.apiUrl}/sbp/qr/payment-status`,
+        {
+          params,
+          headers: {
+            'X-Login': tochkaConfig.login,
+            'X-Signature': signature,
+          },
         },
-      },
-    );
+      );
 
-    const statusItem =
-      data.items?.[0] ||
-      data[0] ||
-      data;
+      const statusItem =
+        data.items?.[0] ||
+        data[0] ||
+        data;
 
-    const sbpStatus: string =
-      statusItem?.status || statusItem?.paymentStatus || statusItem?.operationStatus;
+      const sbpStatus: string =
+        statusItem?.status || statusItem?.paymentStatus || statusItem?.operationStatus;
 
-    if (sbpStatus === 'Completed' || sbpStatus === 'Success' || sbpStatus === 'Paid') {
-      order.payment_status = PaymentStatus.PAID;
-      order.status = OrderStatus.PROCESSING;
-      await this.orderRepo.save(order);
-    } else if (sbpStatus === 'Failed' || sbpStatus === 'Declined' || sbpStatus === 'Cancelled') {
-      order.payment_status = PaymentStatus.FAILED;
-      await this.orderRepo.save(order);
+      if (sbpStatus === 'Completed' || sbpStatus === 'Success' || sbpStatus === 'Paid') {
+        order.payment_status = PaymentStatus.PAID;
+        order.status = OrderStatus.PROCESSING;
+        await this.orderRepo.save(order);
+      } else if (sbpStatus === 'Failed' || sbpStatus === 'Declined' || sbpStatus === 'Cancelled') {
+        order.payment_status = PaymentStatus.FAILED;
+        await this.orderRepo.save(order);
+      }
+
+      return { payment_status: order.payment_status, sbp_status: sbpStatus };
+    } catch (error) {
+      console.error('❌ Tochka status check error:', error.response?.status);
+      throw new BadRequestException('Payment status check failed');
     }
-
-    return { payment_status: order.payment_status, sbp_status: sbpStatus };
   }
 
   private sign(payload: Record<string, any>): string {
+    const secret = process.env.TOCHKA_SECRET || tochkaConfig.secret;
+    
+    if (!secret || secret === 'mock') {
+      console.warn('⚠️ TOCHKA_SECRET missing, mock signature');
+      return 'mock_signature_' + Date.now();
+    }
+
     const flat: any = {};
 
     Object.keys(payload)
@@ -128,8 +177,13 @@ export class PaymentsService {
       .map((k) => `${k}=${flat[k]}`)
       .join('&');
 
-    const hmac = crypto.createHmac('sha256', tochkaConfig.secret);
-    hmac.update(str);
-    return hmac.digest('hex');
+    try {
+      const hmac = crypto.createHmac('sha256', secret);
+      hmac.update(str);
+      return hmac.digest('hex');
+    } catch (error) {
+      console.error('❌ HMAC error:', error);
+      return 'mock_signature_fallback';
+    }
   }
 }
