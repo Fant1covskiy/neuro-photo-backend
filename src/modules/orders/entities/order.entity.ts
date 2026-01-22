@@ -11,7 +11,7 @@ export enum OrderStatus {
   PROCESSING = 'processing',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
-  PAID = 'paid',  // ← ДОБАВИЛИ
+  PAID = 'paid',
 }
 
 export enum PaymentStatus {
@@ -57,7 +57,7 @@ export class Order {
   @Column({ nullable: true })
   tochka_qr_id: string;
 
-  @Column({ nullable: true })  // ← ДОБАВИЛИ
+  @Column({ name: 'qr_code_url', nullable: true })  // ← ИСПРАВИЛИ: добавили name
   qr_code_url: string;
 
   @Column({
