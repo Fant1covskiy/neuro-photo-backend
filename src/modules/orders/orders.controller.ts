@@ -16,7 +16,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { cloudinaryStorage, cloudinaryResultStorage } from '../../config/cloudinary.config';
 
-@Controller()
+@Controller('api')  // ← ДОБАВИЛИ префикс api
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
@@ -30,8 +30,18 @@ export class OrdersController {
     @Body() createOrderDto: CreateOrderDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    const photos = files.map((file: any) => file.path);
+    const photos = files?.map((file: any) => file.path) || [];
     return this.ordersService.create(createOrderDto, photos);
+  }
+
+  @Get('orders/:id/status')  // ← НОВЫЙ роут для проверки статуса
+  async getOrderStatus(@Param('id', ParseIntPipe) id: number) {
+    const order = await this.ordersService.findOne(id);
+    return {
+      id: order.id,
+      status: order.status,
+      qrCodeUrl: order.qr_code_url,
+    };
   }
 
   @Get('admin/orders')
