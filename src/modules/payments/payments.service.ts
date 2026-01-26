@@ -86,7 +86,8 @@ export class PaymentsService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Authorization': token,
+          'Authorization': `Bearer ${token}`,
+          'X-Correlation-ID': `order-${orderId}-${Date.now()}`,
         },
       });
 
@@ -107,6 +108,7 @@ export class PaymentsService {
       };
     } catch (error) {
       console.error('❌ Tochka API Error:', error.response?.status, JSON.stringify(error.response?.data));
+      console.error('❌ Full error:', error.response);
       throw new BadRequestException(`Tochka API failed: ${error.response?.data?.message || error.message}`);
     }
   }
@@ -125,7 +127,8 @@ export class PaymentsService {
         `https://enter.tochka.com/uapi/sbp/v1.0/qr-code/${order.tochka_qr_id}/payment-info`,
         {
           headers: {
-            'Authorization': token,
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
           },
         },
       );
