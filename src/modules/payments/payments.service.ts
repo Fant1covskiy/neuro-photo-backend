@@ -56,37 +56,41 @@ export class PaymentsService {
       throw new BadRequestException('Order not found');
     }
 
-    const amountKopecks = Math.round(Number(order.total_price) * 100);
+    const amount = Number(order.total_price);
     const token = await this.getAccessToken();
 
     const body = {
       Data: {
-        QRType: 'QRDynamic',
-        Amount: amountKopecks.toString(),
-        Currency: 'RUB',
-        PaymentPurpose: `Оплата заказа #${order.id}`,
-        QRExpirationDate: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        amount: amount,
+        currency: 'RUB',
+        paymentPurpose: `Оплата заказа #${order.id}`,
+        qrcType: '01',
+        imageParams: {
+          width: 0,
+          height: 0,
+          mediaType: 'image/png'
+        },
+        sourceName: 'string',
       },
     };
 
     try {
       console.log('🔄 Calling Tochka API...');
       
-      const { data } = await axios.post(
-        `${tochkaConfig.apiUrl}/sbp/qr/merchant/register`,
-        body,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
+      const url = `https://enter.tochka.com/uapi/sbp/v1.0/qr-code/merchant/${tochkaConfig.merchantId}/${tochkaConfig.accountId}`;
+      
+      const { data } = await axios.post(url, body, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
-      );
+      });
 
       console.log('✅ Tochka response:', JSON.stringify(data));
 
-      const qrId = data.Data?.qrcId || data.Data?.QRId;
-      const qrPayload = data.Data?.payload || data.Data?.Payload;
+      const qrId = data.Data?.qrcId || data.qrcId;
+      const qrPayload = data.Data?.payload || data.payload;
 
       order.tochka_qr_id = qrId;
       order.qr_code_url = qrPayload;
@@ -115,7 +119,7 @@ export class PaymentsService {
 
     try {
       const { data } = await axios.get(
-        `${tochkaConfig.apiUrl}/sbp/qr/${order.tochka_qr_id}/payment-info`,
+        `https://enter.tochka.com/uapi/sbp/v1.0/qr-code/${order.tochka_qr_id}/payment-info`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -123,13 +127,13 @@ export class PaymentsService {
         },
       );
 
-      const sbpStatus = data.Data?.Status || data.Data?.status;
+      const sbpStatus = data.Data?.status;
 
-      if (sbpStatus === 'ACWP' || sbpStatus === 'Success') {
+      if (sbpStatus === 'Accepted' || sbpStatus === 'ACWP') {
         order.payment_status = PaymentStatus.PAID;
         order.status = OrderStatus.PROCESSING;
         await this.orderRepo.save(order);
-      } else if (sbpStatus === 'RJCT' || sbpStatus === 'Failed') {
+      } else if (sbpStatus === 'Declined' || sbpStatus === 'RJCT') {
         order.payment_status = PaymentStatus.FAILED;
         await this.orderRepo.save(order);
       }
