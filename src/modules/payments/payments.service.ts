@@ -44,11 +44,11 @@ export class PaymentsService {
       this.accessToken = data.access_token;
       this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
       
-      console.log('✅ Tochka access token obtained:', this.accessToken.substring(0, 20) + '...');
+      console.log('✅ Access token obtained');
       return this.accessToken;
     } catch (error) {
-      console.error('❌ Tochka OAuth error:', error.response?.data || error.message);
-      throw new BadRequestException('Failed to authenticate with Tochka');
+      console.error('❌ OAuth error:', error.response?.data || error.message);
+      throw new BadRequestException('Failed to authenticate');
     }
   }
 
@@ -61,10 +61,6 @@ export class PaymentsService {
 
     const amount = Number(order.total_price);
     const token = await this.getAccessToken();
-
-    if (!token) {
-      throw new BadRequestException('Failed to obtain access token');
-    }
 
     const body = {
       Data: {
@@ -85,14 +81,12 @@ export class PaymentsService {
       const url = `https://enter.tochka.com/uapi/sbp/v1.0/qr-code/merchant/${tochkaConfig.merchantId}/${tochkaConfig.accountId}`;
       
       console.log('🔄 Calling Tochka API:', url);
-      console.log('📦 Body:', JSON.stringify(body, null, 2));
-      console.log('🔑 Token (first 20 chars):', token.substring(0, 20));
       
       const { data } = await axios.post(url, body, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token,
         },
       });
 
@@ -113,7 +107,6 @@ export class PaymentsService {
       };
     } catch (error) {
       console.error('❌ Tochka API Error:', error.response?.status, JSON.stringify(error.response?.data));
-      console.error('❌ Request headers:', error.config?.headers);
       throw new BadRequestException(`Tochka API failed: ${error.response?.data?.message || error.message}`);
     }
   }
@@ -132,7 +125,7 @@ export class PaymentsService {
         `https://enter.tochka.com/uapi/sbp/v1.0/qr-code/${order.tochka_qr_id}/payment-info`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': token,
           },
         },
       );
@@ -150,7 +143,7 @@ export class PaymentsService {
 
       return { payment_status: order.payment_status, sbp_status: sbpStatus };
     } catch (error) {
-      console.error('❌ Tochka status check error:', error.response?.status, error.response?.data);
+      console.error('❌ Status check error:', error.response?.status, error.response?.data);
       throw new BadRequestException('Payment status check failed');
     }
   }
