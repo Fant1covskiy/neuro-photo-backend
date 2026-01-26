@@ -23,13 +23,14 @@ export class PaymentsService {
     }
 
     try {
+      const params = new URLSearchParams();
+      params.append('grant_type', 'client_credentials');
+      params.append('client_id', tochkaConfig.clientId);
+      params.append('client_secret', tochkaConfig.clientSecret);
+
       const { data } = await axios.post(
         'https://enter.tochka.com/connect/token',
-        new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: tochkaConfig.clientId,
-          client_secret: tochkaConfig.clientSecret,
-        }),
+        params,
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -43,7 +44,7 @@ export class PaymentsService {
       console.log('✅ Tochka access token obtained');
       return this.accessToken;
     } catch (error) {
-      console.error('❌ Tochka OAuth error:', error.response?.data);
+      console.error('❌ Tochka OAuth error:', error.response?.data || error.message);
       throw new BadRequestException('Failed to authenticate with Tochka');
     }
   }
@@ -69,7 +70,7 @@ export class PaymentsService {
     };
 
     try {
-      console.log('🔄 Calling Tochka API with body:', JSON.stringify(body));
+      console.log('🔄 Calling Tochka API...');
       
       const { data } = await axios.post(
         `${tochkaConfig.apiUrl}/sbp/qr/merchant/register`,
@@ -82,7 +83,7 @@ export class PaymentsService {
         },
       );
 
-      console.log('✅ Tochka response:', data);
+      console.log('✅ Tochka response:', JSON.stringify(data));
 
       const qrId = data.Data?.qrcId || data.Data?.QRId;
       const qrPayload = data.Data?.payload || data.Data?.Payload;
@@ -98,7 +99,7 @@ export class PaymentsService {
         qrPayload: qrPayload,
       };
     } catch (error) {
-      console.error('❌ Tochka API Error:', error.response?.status, error.response?.data);
+      console.error('❌ Tochka API Error:', error.response?.status, JSON.stringify(error.response?.data));
       throw new BadRequestException(`Tochka API failed: ${error.response?.data?.message || error.message}`);
     }
   }
