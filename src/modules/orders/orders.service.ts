@@ -22,6 +22,7 @@ export class OrdersService {
       first_name: createOrderDto.first_name,
       styles: createOrderDto.styles || [],
       photos: photos,
+      total_price: 0,
       status: OrderStatus.PENDING,
       payment_status: PaymentStatus.NEW,
     });
