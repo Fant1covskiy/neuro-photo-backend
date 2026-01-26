@@ -19,10 +19,13 @@ export class PaymentsService {
 
   private async getAccessToken(): Promise<string> {
     if (this.accessToken && Date.now() < this.tokenExpiry) {
+      console.log('✅ Using cached token');
       return this.accessToken;
     }
 
     try {
+      console.log('🔄 Requesting new access token...');
+      
       const params = new URLSearchParams();
       params.append('grant_type', 'client_credentials');
       params.append('client_id', tochkaConfig.clientId);
@@ -41,7 +44,7 @@ export class PaymentsService {
       this.accessToken = data.access_token;
       this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
       
-      console.log('✅ Tochka access token obtained');
+      console.log('✅ Tochka access token obtained:', this.accessToken.substring(0, 20) + '...');
       return this.accessToken;
     } catch (error) {
       console.error('❌ Tochka OAuth error:', error.response?.data || error.message);
@@ -59,6 +62,10 @@ export class PaymentsService {
     const amount = Number(order.total_price);
     const token = await this.getAccessToken();
 
+    if (!token) {
+      throw new BadRequestException('Failed to obtain access token');
+    }
+
     const body = {
       Data: {
         amount: amount,
@@ -75,9 +82,11 @@ export class PaymentsService {
     };
 
     try {
-      console.log('🔄 Calling Tochka API...');
-      
       const url = `https://enter.tochka.com/uapi/sbp/v1.0/qr-code/merchant/${tochkaConfig.merchantId}/${tochkaConfig.accountId}`;
+      
+      console.log('🔄 Calling Tochka API:', url);
+      console.log('📦 Body:', JSON.stringify(body, null, 2));
+      console.log('🔑 Token (first 20 chars):', token.substring(0, 20));
       
       const { data } = await axios.post(url, body, {
         headers: {
@@ -104,6 +113,7 @@ export class PaymentsService {
       };
     } catch (error) {
       console.error('❌ Tochka API Error:', error.response?.status, JSON.stringify(error.response?.data));
+      console.error('❌ Request headers:', error.config?.headers);
       throw new BadRequestException(`Tochka API failed: ${error.response?.data?.message || error.message}`);
     }
   }
