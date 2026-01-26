@@ -2,16 +2,52 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import axios from 'axios';
-import * as crypto from 'crypto';
 import { Order, OrderStatus, PaymentStatus } from '../orders/entities/order.entity';
 import { tochkaConfig } from '../../config/tochka.config';
 
+
 @Injectable()
 export class PaymentsService {
+  private accessToken: string = '';
+  private tokenExpiry: number = 0;
+
   constructor(
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
   ) {}
+
+
+  private async getAccessToken(): Promise<string> {
+    if (this.accessToken && Date.now() < this.tokenExpiry) {
+      return this.accessToken;
+    }
+
+    try {
+      const { data } = await axios.post(
+        'https://enter.tochka.com/connect/token',
+        new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: tochkaConfig.clientId,
+          client_secret: tochkaConfig.clientSecret,
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        },
+      );
+
+      this.accessToken = data.access_token;
+      this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+      
+      console.log('✅ Tochka access token obtained');
+      return this.accessToken;
+    } catch (error) {
+      console.error('❌ Tochka OAuth error:', error.response?.data);
+      throw new BadRequestException('Failed to authenticate with Tochka');
+    }
+  }
+
 
   async createQr(orderId: number) {
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
@@ -20,72 +56,53 @@ export class PaymentsService {
     }
 
     const amountKopecks = Math.round(Number(order.total_price) * 100);
+    const token = await this.getAccessToken();
 
-    // 🔥 MOCK MODE: Если Tochka недоступна
-    const isMockMode = !tochkaConfig.secret || 
-                       tochkaConfig.secret === 'mock' || 
-                       tochkaConfig.accountId === 'test123';
-    
-    if (isMockMode) {
-      console.log('⚠️ Using MOCK QR (Tochka sandbox unavailable)');
-      
-      const mockQrId = `MOCK_${Date.now()}_${orderId}`;
-      const mockPayload = `https://qr.nspk.ru/AD10006M8KH234G9JOI76TA8930?type=02&bank=100000000009&sum=${amountKopecks}&cur=RUB&crc=AB75`;
-      
-      order.tochka_qr_id = mockQrId;
-      order.payment_status = PaymentStatus.WAITING;
-      await this.orderRepo.save(order);
-
-      return {
-        orderId: order.id,
-        qrId: mockQrId,
-        qrPayload: mockPayload,
-      };
-    }
-
-    // 🌐 PRODUCTION: Real Tochka API
-    const body: any = {
-      merchantId: tochkaConfig.merchantId,
-      accountId: tochkaConfig.accountId,
-      amount: amountKopecks,
-      currency: 'RUB',
-      paymentPurpose: `Оплата заказа #${order.id}`,
-      order: order.id.toString(),
+    const body = {
+      Data: {
+        QRType: 'QRDynamic',
+        Amount: amountKopecks.toString(),
+        Currency: 'RUB',
+        PaymentPurpose: `Оплата заказа #${order.id}`,
+        QRExpirationDate: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      },
     };
 
-    if (tochkaConfig.returnUrl) {
-      body.returnUrl = tochkaConfig.returnUrl;
-    }
-
-    const signature = this.sign(body);
-
     try {
+      console.log('🔄 Calling Tochka API with body:', JSON.stringify(body));
+      
       const { data } = await axios.post(
-        `${tochkaConfig.apiUrl}/sbp/qr/register`,
+        `${tochkaConfig.apiUrl}/sbp/qr/merchant/register`,
         body,
         {
           headers: {
             'Content-Type': 'application/json',
-            'X-Login': tochkaConfig.login,
-            'X-Signature': signature,
+            'Authorization': `Bearer ${token}`,
           },
         },
       );
 
-      order.tochka_qr_id = data.qrcId || data.qrId || data.id;
+      console.log('✅ Tochka response:', data);
+
+      const qrId = data.Data?.qrcId || data.Data?.QRId;
+      const qrPayload = data.Data?.payload || data.Data?.Payload;
+
+      order.tochka_qr_id = qrId;
+      order.qr_code_url = qrPayload;
       order.payment_status = PaymentStatus.WAITING;
       await this.orderRepo.save(order);
 
       return {
         orderId: order.id,
-        qrId: order.tochka_qr_id,
-        qrPayload: data.payload || data.qrPayload || data.qr,
+        qrId: qrId,
+        qrPayload: qrPayload,
       };
     } catch (error) {
       console.error('❌ Tochka API Error:', error.response?.status, error.response?.data);
-      throw new BadRequestException(`Tochka API failed: ${error.message}`);
+      throw new BadRequestException(`Tochka API failed: ${error.response?.data?.message || error.message}`);
     }
   }
+
 
   async getStatus(orderId: number) {
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
@@ -93,97 +110,33 @@ export class PaymentsService {
       throw new BadRequestException('Order or QR not found');
     }
 
-    // 🔥 MOCK MODE: Возвращаем WAITING
-    if (order.tochka_qr_id.startsWith('MOCK_')) {
-      console.log('⚠️ Mock status check - returning WAITING');
-      return { 
-        payment_status: order.payment_status, 
-        sbp_status: 'WAITING' 
-      };
-    }
-
-    const params: any = {
-      merchantId: tochkaConfig.merchantId,
-      accountId: tochkaConfig.accountId,
-      qrcIds: [order.tochka_qr_id],
-    };
-
-    const signature = this.sign(params);
+    const token = await this.getAccessToken();
 
     try {
       const { data } = await axios.get(
-        `${tochkaConfig.apiUrl}/sbp/qr/payment-status`,
+        `${tochkaConfig.apiUrl}/sbp/qr/${order.tochka_qr_id}/payment-info`,
         {
-          params,
           headers: {
-            'X-Login': tochkaConfig.login,
-            'X-Signature': signature,
+            'Authorization': `Bearer ${token}`,
           },
         },
       );
 
-      const statusItem =
-        data.items?.[0] ||
-        data[0] ||
-        data;
+      const sbpStatus = data.Data?.Status || data.Data?.status;
 
-      const sbpStatus: string =
-        statusItem?.status || statusItem?.paymentStatus || statusItem?.operationStatus;
-
-      if (sbpStatus === 'Completed' || sbpStatus === 'Success' || sbpStatus === 'Paid') {
+      if (sbpStatus === 'ACWP' || sbpStatus === 'Success') {
         order.payment_status = PaymentStatus.PAID;
         order.status = OrderStatus.PROCESSING;
         await this.orderRepo.save(order);
-      } else if (sbpStatus === 'Failed' || sbpStatus === 'Declined' || sbpStatus === 'Cancelled') {
+      } else if (sbpStatus === 'RJCT' || sbpStatus === 'Failed') {
         order.payment_status = PaymentStatus.FAILED;
         await this.orderRepo.save(order);
       }
 
       return { payment_status: order.payment_status, sbp_status: sbpStatus };
     } catch (error) {
-      console.error('❌ Tochka status check error:', error.response?.status);
+      console.error('❌ Tochka status check error:', error.response?.status, error.response?.data);
       throw new BadRequestException('Payment status check failed');
-    }
-  }
-
-  private sign(payload: Record<string, any>): string {
-    const secret = process.env.TOCHKA_SECRET || tochkaConfig.secret;
-    
-    if (!secret || secret === 'mock') {
-      console.warn('⚠️ TOCHKA_SECRET missing, mock signature');
-      return 'mock_signature_' + Date.now();
-    }
-
-    const flat: any = {};
-
-    Object.keys(payload)
-      .sort()
-      .forEach((key) => {
-        const value = (payload as any)[key];
-        if (value === undefined || value === null) {
-          return;
-        }
-        if (Array.isArray(value)) {
-          flat[key] = value.join(',');
-        } else if (typeof value === 'object') {
-          flat[key] = JSON.stringify(value);
-        } else {
-          flat[key] = String(value);
-        }
-      });
-
-    const str = Object.keys(flat)
-      .sort()
-      .map((k) => `${k}=${flat[k]}`)
-      .join('&');
-
-    try {
-      const hmac = crypto.createHmac('sha256', secret);
-      hmac.update(str);
-      return hmac.digest('hex');
-    } catch (error) {
-      console.error('❌ HMAC error:', error);
-      return 'mock_signature_fallback';
     }
   }
 }
