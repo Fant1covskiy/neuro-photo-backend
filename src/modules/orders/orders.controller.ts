@@ -37,6 +37,7 @@ export class OrdersController {
       telegram_user_id: body.telegramUserId || body.telegram_user_id,
       username: body.username,
       first_name: body.firstName || body.first_name,
+      styles: [],
     };
     
     return this.ordersService.create(createOrderDto, photos);

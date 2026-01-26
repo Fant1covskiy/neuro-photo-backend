@@ -45,6 +45,12 @@ export class CreateOrderDto {
 
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  styles?: string[];
+
+
+  @IsOptional()
   @IsNumber()
   price?: number;
 

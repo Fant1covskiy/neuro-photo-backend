@@ -20,6 +20,7 @@ export class OrdersService {
       telegram_user_id: createOrderDto.telegram_user_id,
       username: createOrderDto.username,
       first_name: createOrderDto.first_name,
+      styles: createOrderDto.styles || [],
       photos: photos,
       status: OrderStatus.PENDING,
       payment_status: PaymentStatus.NEW,
