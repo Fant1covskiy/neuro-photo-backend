@@ -12,13 +12,14 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { cloudinaryStorage, cloudinaryResultStorage } from '../../config/cloudinary.config';
 
-@Controller('api')  // ← ДОБАВИЛИ префикс api
+
+@Controller('api')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
 
   @Post('orders')
   @UseInterceptors(
@@ -27,14 +28,22 @@ export class OrdersController {
     }),
   )
   async create(
-    @Body() createOrderDto: CreateOrderDto,
+    @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     const photos = files?.map((file: any) => file.path) || [];
+    
+    const createOrderDto = {
+      telegram_user_id: body.telegramUserId || body.telegram_user_id,
+      username: body.username,
+      first_name: body.firstName || body.first_name,
+    };
+    
     return this.ordersService.create(createOrderDto, photos);
   }
 
-  @Get('orders/:id/status')  // ← НОВЫЙ роут для проверки статуса
+
+  @Get('orders/:id/status')
   async getOrderStatus(@Param('id', ParseIntPipe) id: number) {
     const order = await this.ordersService.findOne(id);
     return {
@@ -44,25 +53,30 @@ export class OrdersController {
     };
   }
 
+
   @Get('admin/orders')
   findAll() {
     return this.ordersService.findAll();
   }
+
 
   @Get('orders/user/:telegramUserId')
   findByUser(@Param('telegramUserId') telegramUserId: string) {
     return this.ordersService.findByUser(telegramUserId);
   }
 
+
   @Get('admin/orders/:id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.findOne(id);
   }
 
+
   @Get('orders/:id')
   findOneByUser(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.findOne(id);
   }
+
 
   @Put('admin/orders/:id')
   update(
@@ -72,10 +86,12 @@ export class OrdersController {
     return this.ordersService.update(id, updateOrderDto);
   }
 
+
   @Delete('admin/orders/:id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.remove(id);
   }
+
 
   @Post('admin/orders/:id/result-photos')
   @UseInterceptors(
@@ -90,6 +106,7 @@ export class OrdersController {
     const photos = files.map((file: any) => file.path);
     return this.ordersService.addResultPhotos(id, photos);
   }
+
 
   @Delete('admin/orders/:id/result-photos')
   async deleteResultPhoto(
