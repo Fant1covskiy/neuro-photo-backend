@@ -9,16 +9,23 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFiles,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { OrdersService } from './orders.service';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { PaymentsService } from '../payments/payments.service';
 import { cloudinaryStorage, cloudinaryResultStorage } from '../../config/cloudinary.config';
 
 
 @Controller('api')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    @Inject(forwardRef(() => PaymentsService))
+    private readonly paymentsService: PaymentsService,
+  ) {}
 
 
   @Post('orders')
@@ -40,7 +47,29 @@ export class OrdersController {
       styles: [],
     };
     
-    return this.ordersService.create(createOrderDto, photos);
+    const order = await this.ordersService.create(createOrderDto, photos);
+    
+    try {
+      const qrData = await this.paymentsService.createQr(order.id);
+      
+      const updatedOrder = await this.ordersService.update(order.id, {
+        qr_code_url: qrData.qrPayload,
+        tochka_qr_id: qrData.qrId,
+      });
+      
+      return {
+        id: updatedOrder.id,
+        qrCodeUrl: qrData.qrPayload,
+        qrId: qrData.qrId,
+      };
+    } catch (error) {
+      console.error('QR generation error:', error);
+      return {
+        id: order.id,
+        qrCodeUrl: null,
+        error: 'QR generation failed',
+      };
+    }
   }
 
 
@@ -51,6 +80,7 @@ export class OrdersController {
       id: order.id,
       status: order.status,
       qrCodeUrl: order.qr_code_url,
+      paymentStatus: order.payment_status,
     };
   }
 
