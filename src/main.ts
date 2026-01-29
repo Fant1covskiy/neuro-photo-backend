@@ -14,3 +14,6 @@ async function bootstrap() {
   console.log('Backend running on http://localhost:3000');
 }
 bootstrap();
+console.log('TOCHKA_MERCHANT_ID=', JSON.stringify(process.env.TOCHKA_MERCHANT_ID));
+console.log('TOCHKA_ACCOUNT_ID=', JSON.stringify(process.env.TOCHKA_ACCOUNT_ID));
+console.log('TOCHKA_BANK_CODE=', JSON.stringify(process.env.TOCHKA_BANK_CODE));
