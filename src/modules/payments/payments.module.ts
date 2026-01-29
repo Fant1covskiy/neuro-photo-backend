@@ -3,16 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
 import { Order } from '../orders/entities/order.entity';
-import { OrdersModule } from '../orders/orders.module';
-
+import { TochkaAuthService } from './tochka-auth.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Order]),
-    forwardRef(() => OrdersModule),
-  ],
+  imports: [TypeOrmModule.forFeature([Order])],
   controllers: [PaymentsController],
-  providers: [PaymentsService],
+  providers: [PaymentsService, TochkaAuthService],
   exports: [PaymentsService],
 })
 export class PaymentsModule {}
