@@ -43,20 +43,35 @@ export class TochkaAuthService {
       const params = new URLSearchParams();
       params.append('access_token', clientToken);
 
-      const { data } = await axios.post('https://enter.tochka.com/connect/introspect', params, {
+      const url = 'https://enter.tochka.com/connect/introspect';
+      console.log('INTROSPECT_URL=', url);
+
+      const res = await axios.post(url, params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        validateStatus: () => true,
       });
 
-      if (typeof data !== 'string' || !data.startsWith('eyJ')) {
-        throw new BadRequestException(`Tochka introspect returned unexpected payload`);
+      const data = res.data;
+
+      if (typeof data === 'string' && data.startsWith('eyJ')) {
+        this.hybridToken = data;
+        this.hybridTokenExpiry = Date.now() + (86400 - 60) * 1000;
+        return this.hybridToken;
       }
 
-      this.hybridToken = data;
-      this.hybridTokenExpiry = Date.now() + (86400 - 60) * 1000;
-      return this.hybridToken;
+      if (data?.active === true && typeof data?.hybrid_access_token === 'string') {
+        this.hybridToken = data.hybrid_access_token;
+        const exp = typeof data?.exp === 'number' ? data.exp * 1000 : Date.now() + 86400 * 1000;
+        this.hybridTokenExpiry = exp - 60 * 1000;
+        return this.hybridToken;
+      }
+
+      throw new BadRequestException(
+        `Tochka introspect unexpected response: status=${res.status} data=${JSON.stringify(data)}`,
+      );
     } catch (e: any) {
       throw new BadRequestException(
-        `Tochka introspect failed: ${e?.response?.data?.message || e?.response?.data?.error || e.message}`,
+        `Tochka introspect failed: ${e?.response?.status || ''} ${JSON.stringify(e?.response?.data) || e.message}`,
       );
     }
   }
