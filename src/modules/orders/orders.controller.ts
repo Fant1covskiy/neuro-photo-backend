@@ -12,12 +12,15 @@ import {
   Inject,
   forwardRef,
   BadRequestException,
+  UnauthorizedException,
+  Headers,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { OrdersService } from './orders.service';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PaymentsService } from '../payments/payments.service';
 import { cloudinaryStorage, cloudinaryResultStorage } from '../../config/cloudinary.config';
+import { OrderStatus, PaymentStatus } from './entities/order.entity';
 
 @Controller('api')
 export class OrdersController {
@@ -65,18 +68,37 @@ export class OrdersController {
   ) {
     const order = await this.ordersService.findOne(id);
 
-    if (order.payment_status !== 'paid') {
+    if (order.payment_status !== PaymentStatus.PAID) {
       throw new BadRequestException('Order is not paid');
     }
 
     const photos = files?.map((file: any) => file.path) || [];
-    if (!photos.length) {
-      throw new BadRequestException('No photos uploaded');
-    }
+    if (!photos.length) throw new BadRequestException('No photos uploaded');
 
     await this.ordersService.update(id, { photos } as any);
 
     return { id, photos };
+  }
+
+  @Post('dev/orders/:id/mark-paid')
+  async devMarkPaid(
+    @Param('id', ParseIntPipe) id: number,
+    @Headers('x-dev-admin-token') token: string,
+  ) {
+    const expected = process.env.DEV_ADMIN_TOKEN || '';
+    if (!expected || token !== expected) throw new UnauthorizedException('Invalid dev token');
+
+    const order = await this.ordersService.findOne(id);
+
+    order.payment_status = PaymentStatus.PAID;
+    order.status = OrderStatus.PAID;
+
+    await this.ordersService.update(order.id, {
+      payment_status: order.payment_status,
+      status: order.status,
+    });
+
+    return { id: order.id, payment_status: order.payment_status, status: order.status };
   }
 
   @Get('orders/:id/status')
