@@ -11,6 +11,7 @@ import {
   UploadedFiles,
   Inject,
   forwardRef,
+  BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { OrdersService } from './orders.service';
@@ -27,14 +28,7 @@ export class OrdersController {
   ) {}
 
   @Post('orders')
-  @UseInterceptors(
-    FilesInterceptor('photos', 3, {
-      storage: cloudinaryStorage,
-    }),
-  )
-  async create(@Body() body: any, @UploadedFiles() files: Express.Multer.File[]) {
-    const photos = files?.map((file: any) => file.path) || [];
-
+  async create(@Body() body: any) {
     const createOrderDto = {
       telegram_user_id: body.telegramUserId || body.telegram_user_id,
       username: body.username,
@@ -43,7 +37,7 @@ export class OrdersController {
       price: body.price !== undefined ? Number(body.price) : undefined,
     };
 
-    const order = await this.ordersService.create(createOrderDto as any, photos);
+    const order = await this.ordersService.create(createOrderDto as any, []);
 
     const qrData = await this.paymentsService.createQr(order.id);
 
@@ -57,6 +51,32 @@ export class OrdersController {
       qrCodeUrl: qrData.qrPayload,
       qrId: qrData.qrId,
     };
+  }
+
+  @Post('orders/:id/photos')
+  @UseInterceptors(
+    FilesInterceptor('photos', 3, {
+      storage: cloudinaryStorage,
+    }),
+  )
+  async uploadClientPhotos(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const order = await this.ordersService.findOne(id);
+
+    if (order.payment_status !== 'paid') {
+      throw new BadRequestException('Order is not paid');
+    }
+
+    const photos = files?.map((file: any) => file.path) || [];
+    if (!photos.length) {
+      throw new BadRequestException('No photos uploaded');
+    }
+
+    await this.ordersService.update(id, { photos } as any);
+
+    return { id, photos };
   }
 
   @Get('orders/:id/status')
