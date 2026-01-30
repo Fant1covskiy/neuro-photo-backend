@@ -22,20 +22,26 @@ export class PaymentsService {
       throw new BadRequestException('Tochka config missing: merchantId/accountId/bankCode');
     }
 
+    const amountRub = Number(order.total_price);
+    if (!Number.isFinite(amountRub) || amountRub <= 0) {
+      throw new BadRequestException('Order total_price must be > 0 to create QR');
+    }
+
+    const amountKopecks = Math.round(amountRub * 100);
     const token = this.tochkaAuth.getToken();
-    const amount = Number(order.total_price);
 
     const body = {
       Data: {
-        amount,
+        amount: amountKopecks,
         currency: 'RUB',
         paymentPurpose: `Оплата заказа #${order.id}`,
         qrcType: '01',
-        image: {
-          width: 200,
-          height: 200,
+        imageParams: {
+          width: 300,
+          height: 300,
           mediaType: 'image/png',
         },
+        sourceName: 'neuro-photo',
       },
     };
 
@@ -55,7 +61,7 @@ export class PaymentsService {
       const qrPayload = data?.Data?.payload;
 
       if (!qrId || !qrPayload) {
-        throw new BadRequestException('Tochka returned no qrcId/payload');
+        throw new BadRequestException(`Tochka returned no qrcId/payload: ${JSON.stringify(data)}`);
       }
 
       order.tochka_qr_id = qrId;
@@ -70,9 +76,9 @@ export class PaymentsService {
         imageBase64: data?.Data?.image?.content ?? null,
       };
     } catch (e: any) {
-      throw new BadRequestException(
-        `Tochka QR failed: ${e?.response?.data?.message || JSON.stringify(e?.response?.data) || e.message}`,
-      );
+      const status = e?.response?.status;
+      const resp = e?.response?.data;
+      throw new BadRequestException(`Tochka QR failed: status=${status} data=${JSON.stringify(resp) || e.message}`);
     }
   }
 
@@ -106,9 +112,9 @@ export class PaymentsService {
 
       return { payment_status: order.payment_status, sbp_status: sbpStatus };
     } catch (e: any) {
-      throw new BadRequestException(
-        `Tochka status failed: ${e?.response?.data?.message || JSON.stringify(e?.response?.data) || e.message}`,
-      );
+      const status = e?.response?.status;
+      const resp = e?.response?.data;
+      throw new BadRequestException(`Tochka status failed: status=${status} data=${JSON.stringify(resp) || e.message}`);
     }
   }
 }
