@@ -22,7 +22,7 @@ export class PaymentsService {
       throw new BadRequestException('Tochka config missing: merchantId/accountId/bankCode');
     }
 
-    const token = await this.tochkaAuth.getHybridToken();
+    const token = this.tochkaAuth.getToken();
     const amount = Number(order.total_price);
 
     const body = {
@@ -80,7 +80,7 @@ export class PaymentsService {
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
     if (!order || !order.tochka_qr_id) throw new BadRequestException('Order or QR not found');
 
-    const token = await this.tochkaAuth.getHybridToken();
+    const token = this.tochkaAuth.getToken();
 
     try {
       const { data } = await axios.get(
