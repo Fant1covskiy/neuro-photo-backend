@@ -139,7 +139,7 @@ export class OrdersController {
 
   @Post('admin/orders/:id/result-photos')
   @UseInterceptors(
-    FilesInterceptor('photos', 10, {
+    FilesInterceptor('photos', 5, {
       storage: cloudinaryResultStorage,
     }),
   )
