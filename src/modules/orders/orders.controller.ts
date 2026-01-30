@@ -88,17 +88,12 @@ export class OrdersController {
     const expected = process.env.DEV_ADMIN_TOKEN || '';
     if (!expected || token !== expected) throw new UnauthorizedException('Invalid dev token');
 
-    const order = await this.ordersService.findOne(id);
-
-    order.payment_status = PaymentStatus.PAID;
-    order.status = OrderStatus.PAID;
-
-    await this.ordersService.update(order.id, {
-      payment_status: order.payment_status,
-      status: order.status,
+    await this.ordersService.update(id, {
+      payment_status: PaymentStatus.PAID,
+      status: OrderStatus.PROCESSING,
     });
 
-    return { id: order.id, payment_status: order.payment_status, status: order.status };
+    return { id, payment_status: PaymentStatus.PAID, status: OrderStatus.PROCESSING };
   }
 
   @Get('orders/:id/status')
@@ -148,7 +143,10 @@ export class OrdersController {
       storage: cloudinaryResultStorage,
     }),
   )
-  async uploadResultPhotos(@Param('id', ParseIntPipe) id: number, @UploadedFiles() files: Express.Multer.File[]) {
+  async uploadResultPhotos(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
     const photos = files.map((file: any) => file.path);
     return this.ordersService.addResultPhotos(id, photos);
   }
