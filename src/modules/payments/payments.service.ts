@@ -73,6 +73,7 @@ export class PaymentsService {
         orderId: order.id,
         qrId,
         qrPayload,
+        payUrl: qrPayload,
         imageBase64: data?.Data?.image?.content ?? null,
       };
     } catch (e: any) {
