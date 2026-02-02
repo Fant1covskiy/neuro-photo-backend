@@ -51,7 +51,8 @@ export class OrdersController {
 
     return {
       id: order.id,
-      qrCodeUrl: qrData.qrPayload,
+      qrCodeUrl: qrData.paymentLink,
+      qrPayload: qrData.qrPayload,
       qrId: qrData.qrId,
     };
   }

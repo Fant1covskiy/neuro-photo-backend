@@ -64,6 +64,8 @@ export class PaymentsService {
         throw new BadRequestException(`Tochka returned no qrcId/payload: ${JSON.stringify(data)}`);
       }
 
+      const paymentLink = `https://qr.nspk.ru/${qrId}`;
+
       order.tochka_qr_id = qrId;
       order.qr_code_url = qrPayload;
       order.payment_status = PaymentStatus.WAITING;
@@ -73,6 +75,7 @@ export class PaymentsService {
         orderId: order.id,
         qrId,
         qrPayload,
+        paymentLink,
         imageBase64: data?.Data?.image?.content ?? null,
       };
     } catch (e: any) {
