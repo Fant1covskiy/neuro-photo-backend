@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Category } from '../categories/entities/category.entity';
 
 @Entity('styles')
 export class Style {
@@ -25,4 +26,8 @@ export class Style {
 
   @Column({ default: true })
   is_active: boolean;
+
+  @ManyToOne(() => Category, { eager: false })
+  @JoinColumn({ name: 'category_id' })
+  category: Category;
 }

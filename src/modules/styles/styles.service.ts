@@ -22,6 +22,7 @@ export class StylesService {
     const options: any = {
       where,
       order: { id: 'DESC' },
+      relations: ['category'],
     };
 
     if (filters?.limit) {
@@ -34,18 +35,21 @@ export class StylesService {
   async findAllAdmin() {
     return this.stylesRepository.find({
       order: { id: 'DESC' },
+      relations: ['category'],
     });
   }
 
   async findOne(id: number) {
     return this.stylesRepository.findOne({
       where: { id },
+      relations: ['category'],
     });
   }
 
   async search(query: string) {
     return this.stylesRepository
       .createQueryBuilder('style')
+      .leftJoinAndSelect('style.category', 'category')
       .where('style.is_active = :isActive', { isActive: true })
       .andWhere(
         '(LOWER(style.name) LIKE LOWER(:query) OR LOWER(style.description) LIKE LOWER(:query))',
